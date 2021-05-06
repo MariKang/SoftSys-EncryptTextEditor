@@ -409,6 +409,7 @@ void processDelete() {
 
 
 void openFile(char *filename) {
+    int i;
     /*
     Open the file to edit.
     */
@@ -431,9 +432,14 @@ void openFile(char *filename) {
         //Find the actual length of the line by reducing the linelen until the
         //last character is '\n' or '\r'
         while (linelen > 0 && (line[linelen - 1] == '\n' ||
-                line[linelen - 1] == '\r'))
+                line[linelen - 1] == '\r')){
             linelen--;
-
+        for(i = 0; (i < 1000 && line[i] != '\0'); i++){
+            if (line[i] != '\n'){
+              line[i] = line[i] - 3;
+            }
+          }
+        }
         //Append the current row.
         insertRow(T.numrows, line, linelen);
     }
@@ -474,6 +480,7 @@ char *rowsToString(int *len) {
 
 
 void saveFile() {
+    int i;
     //Get the new name of the file if it's not an existing file.
     if (T.filename == NULL) {
         T.filename = getNewFileName("Save as: %s (ESC to cancel)");
@@ -486,7 +493,11 @@ void saveFile() {
     int len;
     //Change the contexts into string.
     char *buf = rowsToString(&len);
-
+    for(i = 0; (i < 1000 && buf[i] != '\0'); i++){
+      if (buf[i] != '\n'){
+        buf[i] = buf[i] + 3; //the key for encryption is 3 that is added to ASCII value
+      }
+    }
     //Write the string to the path.
     int fd = open(T.filename, O_RDWR | O_CREAT, 0644);
     if (fd != -1) {
