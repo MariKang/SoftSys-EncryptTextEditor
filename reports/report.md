@@ -130,8 +130,8 @@ When the program run, we can see the name of our text editor in the middle and t
 
 The user can write, delete, and move cursor around in the text editor. When user is done with editing, the file can be saved using Ctrl-S. Below is the example of the file and how it is encrypted.
 
-![Text Example](write.png)
-![Encrypted](encrypted.png)
+![Text Example](images/write.png)
+![Encrypted](images/encrypted.png)
 
 ## *Design Decisions*
 
