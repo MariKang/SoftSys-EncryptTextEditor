@@ -31,10 +31,13 @@ And run the text editor using
 
 ## Features
 Users can see the special key to quit or save, the file name, and how many lines they have.
+
 ![image 1](reports/images/start.png)
 
 Users can write their documents in the text editor!
+
 ![image 2](reports/images/write.png)
 
 When saved, the file is encrypted.
+
 ![image 3](reports/images/encrypted.png)
