@@ -87,8 +87,7 @@ struct Config {
 //Variable containing state of the text file.
 struct Config T;
 
-void updateStatusBar(const char *fmt, ...);
-void refreshScreen();
+void updateStatusBar(const char *msg, ...);
 char *getNewFileName(char *s);
 
 
@@ -120,8 +119,7 @@ int readOneKey() {
     if (key_val == '\x1b') {
         char next[3];
 
-        if (read(STDIN_FILENO, &next[0], 1) != 1) return '\x1b';
-        if (read(STDIN_FILENO, &next[1], 1) != 1) return '\x1b';
+        if (read(STDIN_FILENO, &next[0], 2) != 2) return '\x1b';
 
         if (next[0] == '[') {
             if (next[1] < '0' || next[1] > '9') {
@@ -235,32 +233,32 @@ void updateRender(erow *row) {
     row->size_r = idx;
 }
 
-void insertRow(int at, char *s, size_t len) {
+void insertRow(int current_row, char *s, size_t len) {
     /*
     Insert the context in the row.
     */
 
     //Validate the index of the column.
-    if (at < 0 || at > T.numrows) return;
+    if (current_row < 0 || current_row > T.numrows) return;
 
     //Allocate space for a new row.
     T.row = realloc(T.row, sizeof(erow) * (T.numrows + 1));
 
     //Make room at the specified index for the new row.
-    memmove(&T.row[at + 1], &T.row[at], sizeof(erow) * (T.numrows - at));
+    memmove(&T.row[current_row + 1], &T.row[current_row], sizeof(erow) * (T.numrows - current_row));
 
     //Set the current row size.
-    T.row[at].size = len;
+    T.row[current_row].size = len;
 
     //Put the contents in the row into 'chars'.
-    T.row[at].chars = malloc(len + 1);
-    memcpy(T.row[at].chars, s, len);
-    T.row[at].chars[len] = '\0';
+    T.row[current_row].chars = malloc(len + 1);
+    memcpy(T.row[current_row].chars, s, len);
+    T.row[current_row].chars[len] = '\0';
 
     //Initialize the render.
-    T.row[at].size_r = 0;
-    T.row[at].render = NULL;
-    updateRender(&T.row[at]);
+    T.row[current_row].size_r = 0;
+    T.row[current_row].render = NULL;
+    updateRender(&T.row[current_row]);
 
     //Increment the number of rows in the current file.
     T.numrows++;
@@ -276,36 +274,36 @@ void freeRow(erow *row) {
     free(row->chars);
 }
 
-void deleteRow(int at) {
+void deleteRow(int current_row) {
     /*
     Delete a row.
     */
 
     //Validate the index of the column.
-    if (at < 0 || at >= T.numrows) return;
-    freeRow(&T.row[at]);
+    if (current_row < 0 || current_row >= T.numrows) return;
+    freeRow(&T.row[current_row]);
     //Overwrite the deleted rwo struct with the rest of the rows
-    memmove(&T.row[at], &T.row[at + 1], sizeof(erow) * (T.numrows - at - 1));
+    memmove(&T.row[current_row], &T.row[current_row + 1], sizeof(erow) * (T.numrows - current_row - 1));
     T.numrows--;
     T.updated++;
 }
 
-void insertCharFromKey(erow *row, int at, int c) {
+void insertCharFromKey(erow *row, int current_row, int c) {
     /*
     Insert a single character into the position.
     */
 
     //Validate the index(col) that character will be inserted into.
-    if (at < 0 || at > row->size) at = row->size;
+    if (current_row < 0 || current_row > row->size) current_row = row->size;
     //Allocate spaces for chars of the erow
     row->chars = realloc(row->chars, row->size + 2);
 
     //Make room for the new character.
-    memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
+    memmove(&row->chars[current_row + 1], &row->chars[current_row], row->size - current_row + 1);
 
     //Increment the size and assign the character to its position in the array.
     row->size++;
-    row->chars[at] = c;
+    row->chars[current_row] = c;
 
     //Update render and size_r with new row content.
     updateRender(row);
@@ -324,13 +322,13 @@ void appendTwoRows(erow *row, char *s, size_t len) {
     T.updated++;
 }
 
-void deleteChar(erow *row, int at) {
+void deleteChar(erow *row, int current_row) {
     /*
     Delete a character in the row.
     */
-    if (at < 0 || at >= row->size) return;
+    if (current_row < 0 || current_row >= row->size) return;
     //Overwrite the deleted character with the charctger that come after it.
-    memmove(&row->chars[at], &row->chars[at + 1], row->size - at);
+    memmove(&row->chars[current_row], &row->chars[current_row + 1], row->size - current_row);
     //Decrement the size of the row.
     row->size--;
 
@@ -434,11 +432,11 @@ void openFile(char *filename) {
         while (linelen > 0 && (line[linelen - 1] == '\n' ||
                 line[linelen - 1] == '\r')){
             linelen--;
-        for(i = 0; (i < 1000 && line[i] != '\0'); i++){
-            if (line[i] != '\n'){
-              line[i] = line[i] - 3;
+            for(i = 0; (i < 1000 && line[i] != '\0'); i++){
+                if (line[i] != '\n'){
+                  line[i] = line[i] - 3;
+                }
             }
-          }
         }
         //Append the current row.
         insertRow(T.numrows, line, linelen);
@@ -714,16 +712,16 @@ void refreshScreen() {
     freeBuffer(&ab);
 }
 
-void updateStatusBar(const char *fmt, ...) {
+void updateStatusBar(const char *msg, ...) {
     /*
     Set the status message in the status bar.
     */
-    va_list ap;
-    va_start(ap, fmt);
+    va_list ext;
+    va_start(ext, msg);
     //Store the string in E.message. vsnprintf reads the format string and
     //call va_arg() to get each argument.
-    vsnprintf(T.message, sizeof(T.message), fmt, ap);
-    va_end(ap);
+    vsnprintf(T.message, sizeof(T.message), msg, ext);
+    va_end(ext);
 
     //Set to the current time.
     T.message_time = time(NULL);
